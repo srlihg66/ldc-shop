@@ -1,64 +1,96 @@
 import { db } from "./index";
-import { products, cards, orders, settings, reviews, loginUsers } from "./schema";
-import { eq, sql, desc, and, asc, gte } from "drizzle-orm";
+import { products, cards, orders, settings, reviews, loginUsers, categories } from "./schema";
+import { eq, sql, desc, and, asc, gte, or } from "drizzle-orm";
+
+async function ensureProductsColumns() {
+    await db.execute(sql`
+        ALTER TABLE products ADD COLUMN IF NOT EXISTS compare_at_price DECIMAL(10, 2);
+        ALTER TABLE products ADD COLUMN IF NOT EXISTS is_hot BOOLEAN DEFAULT FALSE;
+    `)
+}
+
+async function withProductColumnFallback<T>(fn: () => Promise<T>): Promise<T> {
+    try {
+        return await fn()
+    } catch (error: any) {
+        const errorString = JSON.stringify(error)
+        if (errorString.includes('42703')) {
+            await ensureProductsColumns()
+            return await fn()
+        }
+        throw error
+    }
+}
 
 export async function getProducts() {
-    return await db.select({
-        id: products.id,
-        name: products.name,
-        description: products.description,
-        price: products.price,
-        image: products.image,
-        category: products.category,
-        isActive: products.isActive,
-        sortOrder: products.sortOrder,
-        purchaseLimit: products.purchaseLimit,
-        stock: sql<number>`count(case when ${cards.isUsed} = false then 1 end)::int`,
-        sold: sql<number>`count(case when ${cards.isUsed} = true then 1 end)::int`
+    return await withProductColumnFallback(async () => {
+        return await db.select({
+            id: products.id,
+            name: products.name,
+            description: products.description,
+            price: products.price,
+            compareAtPrice: products.compareAtPrice,
+            image: products.image,
+            category: products.category,
+            isHot: products.isHot,
+            isActive: products.isActive,
+            sortOrder: products.sortOrder,
+            purchaseLimit: products.purchaseLimit,
+            stock: sql<number>`count(case when COALESCE(${cards.isUsed}, false) = false then 1 end)::int`,
+            sold: sql<number>`count(case when COALESCE(${cards.isUsed}, false) = true then 1 end)::int`
+        })
+            .from(products)
+            .leftJoin(cards, eq(products.id, cards.productId))
+            .groupBy(products.id)
+            .orderBy(asc(products.sortOrder), desc(products.createdAt));
     })
-        .from(products)
-        .leftJoin(cards, eq(products.id, cards.productId))
-        .groupBy(products.id)
-        .orderBy(asc(products.sortOrder), desc(products.createdAt));
 }
 
 // Get only active products (for home page)
 export async function getActiveProducts() {
-    return await db.select({
-        id: products.id,
-        name: products.name,
-        description: products.description,
-        price: products.price,
-        image: products.image,
-        category: products.category,
-        purchaseLimit: products.purchaseLimit,
-        stock: sql<number>`count(case when ${cards.isUsed} = false then 1 end)::int`,
-        sold: sql<number>`count(case when ${cards.isUsed} = true then 1 end)::int`
+    return await withProductColumnFallback(async () => {
+        return await db.select({
+            id: products.id,
+            name: products.name,
+            description: products.description,
+            price: products.price,
+            compareAtPrice: products.compareAtPrice,
+            image: products.image,
+            category: products.category,
+            isHot: products.isHot,
+            purchaseLimit: products.purchaseLimit,
+            stock: sql<number>`count(case when COALESCE(${cards.isUsed}, false) = false then 1 end)::int`,
+            sold: sql<number>`count(case when COALESCE(${cards.isUsed}, false) = true then 1 end)::int`
+        })
+            .from(products)
+            .leftJoin(cards, eq(products.id, cards.productId))
+            .where(eq(products.isActive, true))
+            .groupBy(products.id)
+            .orderBy(asc(products.sortOrder), desc(products.createdAt));
     })
-        .from(products)
-        .leftJoin(cards, eq(products.id, cards.productId))
-        .where(eq(products.isActive, true))
-        .groupBy(products.id)
-        .orderBy(asc(products.sortOrder), desc(products.createdAt));
 }
 
 export async function getProduct(id: string) {
-    const result = await db.select({
-        id: products.id,
-        name: products.name,
-        description: products.description,
-        price: products.price,
-        image: products.image,
-        category: products.category,
-        purchaseLimit: products.purchaseLimit,
-        stock: sql<number>`count(case when ${cards.isUsed} = false then 1 end)::int`
-    })
-        .from(products)
-        .leftJoin(cards, eq(products.id, cards.productId))
-        .where(eq(products.id, id))
-        .groupBy(products.id);
+    return await withProductColumnFallback(async () => {
+        const result = await db.select({
+            id: products.id,
+            name: products.name,
+            description: products.description,
+            price: products.price,
+            compareAtPrice: products.compareAtPrice,
+            image: products.image,
+            category: products.category,
+            isHot: products.isHot,
+            purchaseLimit: products.purchaseLimit,
+            stock: sql<number>`count(case when COALESCE(${cards.isUsed}, false) = false then 1 end)::int`
+        })
+            .from(products)
+            .leftJoin(cards, eq(products.id, cards.productId))
+            .where(eq(products.id, id))
+            .groupBy(products.id);
 
-    return result[0];
+        return result[0];
+    })
 }
 
 // Dashboard Stats
@@ -104,6 +136,121 @@ export async function setSetting(key: string, value: string): Promise<void> {
             target: settings.key,
             set: { value, updatedAt: new Date() }
         });
+}
+
+// Categories (best-effort; table created on demand)
+async function ensureCategoriesTable() {
+    await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS categories (
+            id SERIAL PRIMARY KEY,
+            name TEXT NOT NULL,
+            icon TEXT,
+            sort_order INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS categories_name_uq ON categories(name);
+    `)
+}
+
+export async function getCategories(): Promise<Array<{ id: number; name: string; icon: string | null; sortOrder: number }>> {
+    try {
+        const rows = await db.select({
+            id: categories.id,
+            name: categories.name,
+            icon: categories.icon,
+            sortOrder: sql<number>`COALESCE(${categories.sortOrder}, 0)::int`,
+        }).from(categories).orderBy(asc(categories.sortOrder), asc(categories.name))
+        return rows
+    } catch (error: any) {
+        if (isMissingTable(error)) {
+            await ensureCategoriesTable()
+            return []
+        }
+        throw error
+    }
+}
+
+export async function searchActiveProducts(params: {
+    q?: string
+    category?: string
+    sort?: string
+    page?: number
+    pageSize?: number
+}) {
+    const q = (params.q || '').trim()
+    const category = (params.category || '').trim()
+    const sort = (params.sort || 'default').trim()
+    const page = params.page && params.page > 0 ? params.page : 1
+    const pageSize = Math.min(params.pageSize && params.pageSize > 0 ? params.pageSize : 24, 60)
+    const offset = (page - 1) * pageSize
+
+    const whereParts: any[] = [eq(products.isActive, true)]
+    if (category && category !== 'all') whereParts.push(eq(products.category, category))
+    if (q) {
+        const like = `%${q}%`
+        whereParts.push(or(
+            sql`${products.name} ILIKE ${like}`,
+            sql`COALESCE(${products.description}, '') ILIKE ${like}`
+        ))
+    }
+    const whereExpr = and(...whereParts)
+
+    const orderByParts: any[] = []
+    switch (sort) {
+        case 'priceAsc':
+            orderByParts.push(asc(products.price))
+            break
+        case 'priceDesc':
+            orderByParts.push(desc(products.price))
+            break
+        case 'stockDesc':
+            orderByParts.push(desc(sql<number>`count(case when ${cards.isUsed} = false then 1 end)::int`))
+            break
+        case 'soldDesc':
+            orderByParts.push(desc(sql<number>`count(case when ${cards.isUsed} = true then 1 end)::int`))
+            break
+        case 'hot':
+            orderByParts.push(desc(sql<number>`case when ${products.isHot} = true then 1 else 0 end`))
+            orderByParts.push(asc(products.sortOrder), desc(products.createdAt))
+            break
+        default:
+            orderByParts.push(asc(products.sortOrder), desc(products.createdAt))
+            break
+    }
+
+    const [items, totalRes] = await withProductColumnFallback(async () => {
+        const rowsPromise = db.select({
+            id: products.id,
+            name: products.name,
+            description: products.description,
+            price: products.price,
+            compareAtPrice: products.compareAtPrice,
+            image: products.image,
+            category: products.category,
+            isHot: products.isHot,
+            purchaseLimit: products.purchaseLimit,
+            stock: sql<number>`count(case when COALESCE(${cards.isUsed}, false) = false then 1 end)::int`,
+            sold: sql<number>`count(case when COALESCE(${cards.isUsed}, false) = true then 1 end)::int`
+        })
+            .from(products)
+            .leftJoin(cards, eq(products.id, cards.productId))
+            .where(whereExpr)
+            .groupBy(products.id)
+            .orderBy(...orderByParts)
+            .limit(pageSize)
+            .offset(offset)
+
+        const countQuery = db.select({ count: sql<number>`count(*)::int` }).from(products).where(whereExpr)
+        return Promise.all([rowsPromise, countQuery])
+    })
+
+    return {
+        items,
+        total: totalRes[0]?.count || 0,
+        page,
+        pageSize,
+    }
 }
 
 // Reviews
@@ -371,7 +518,7 @@ export async function cancelExpiredOrders(filters: { productId?: string; userId?
                     await tx.execute(sql`
                         UPDATE cards
                         SET reserved_order_id = NULL, reserved_at = NULL
-                        WHERE reserved_order_id = ${expiredOrderId} AND is_used = false
+                        WHERE reserved_order_id = ${expiredOrderId} AND COALESCE(is_used, false) = false
                     `);
                 } catch (error: any) {
                     if (!isMissingTableOrColumn(error)) throw error;

@@ -2,7 +2,7 @@
 
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
-import { products, cards, reviews } from "@/lib/db/schema"
+import { products, cards, reviews, categories } from "@/lib/db/schema"
 import { eq, sql } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { setSetting } from "@/lib/db/queries"
@@ -25,16 +25,52 @@ export async function saveProduct(formData: FormData) {
     const name = formData.get('name') as string
     const description = formData.get('description') as string
     const price = formData.get('price') as string
+    const compareAtPrice = (formData.get('compareAtPrice') as string | null) || null
     const category = formData.get('category') as string
     const image = formData.get('image') as string
     const purchaseLimit = formData.get('purchaseLimit') ? parseInt(formData.get('purchaseLimit') as string) : null
+    const isHot = formData.get('isHot') === 'on'
 
-    await db.insert(products).values({
-        id, name, description, price, category, image, purchaseLimit
-    }).onConflictDoUpdate({
-        target: products.id,
-        set: { name, description, price, category, image, purchaseLimit }
-    })
+    const doSave = async () => {
+        await db.insert(products).values({
+            id,
+            name,
+            description,
+            price,
+            compareAtPrice: compareAtPrice && compareAtPrice !== '0' ? compareAtPrice : null,
+            category,
+            image,
+            purchaseLimit,
+            isHot
+        }).onConflictDoUpdate({
+            target: products.id,
+            set: {
+                name,
+                description,
+                price,
+                compareAtPrice: compareAtPrice && compareAtPrice !== '0' ? compareAtPrice : null,
+                category,
+                image,
+                purchaseLimit,
+                isHot
+            }
+        })
+    }
+
+    try {
+        await doSave()
+    } catch (error: any) {
+        const errorString = JSON.stringify(error)
+        if (errorString.includes('42703')) {
+            await db.execute(sql`
+                ALTER TABLE products ADD COLUMN IF NOT EXISTS compare_at_price DECIMAL(10, 2);
+                ALTER TABLE products ADD COLUMN IF NOT EXISTS is_hot BOOLEAN DEFAULT FALSE;
+            `)
+            await doSave()
+        } else {
+            throw error
+        }
+    }
 
     revalidatePath('/admin')
     revalidatePath('/')
@@ -66,17 +102,38 @@ export async function addCards(formData: FormData) {
     const productId = formData.get('product_id') as string
     const rawCards = formData.get('cards') as string
 
-    const cardList = rawCards.split('\n').map(c => c.trim()).filter(c => c)
-    if (cardList.length === 0) return
+    const cardList = rawCards
+        .split(/[\n,]+/)
+        .map(c => c.trim())
+        .filter(c => c)
+    const deduped = Array.from(new Set(cardList))
+    if (deduped.length === 0) return
 
-    await db.insert(cards).values(
-        cardList.map(key => ({
-            productId,
-            cardKey: key
-        }))
-    )
+    try {
+        await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS cards_product_id_card_key_uq ON cards(product_id, card_key);`)
+    } catch {
+        // best effort
+    }
+
+    try {
+        // @ts-ignore drizzle type supports this in runtime
+        await db.insert(cards).values(
+            deduped.map(key => ({
+                productId,
+                cardKey: key
+            }))
+        ).onConflictDoNothing()
+    } catch {
+        await db.insert(cards).values(
+            deduped.map(key => ({
+                productId,
+                cardKey: key
+            }))
+        )
+    }
 
     revalidatePath('/admin')
+    revalidatePath(`/admin/cards/${productId}`)
     revalidatePath('/')
 }
 
@@ -102,9 +159,9 @@ export async function deleteCard(cardId: number) {
     await db.delete(cards).where(eq(cards.id, cardId))
 
     revalidatePath('/admin')
+    revalidatePath('/admin/cards')
     revalidatePath('/')
 }
-
 
 export async function saveShopName(rawName: string) {
     await checkAdmin()
@@ -147,3 +204,53 @@ export async function deleteReview(reviewId: number) {
     revalidatePath('/admin/reviews')
 }
 
+export async function saveLowStockThreshold(raw: string) {
+    await checkAdmin()
+    const n = Number.parseInt(String(raw || '').trim(), 10)
+    const value = Number.isFinite(n) && n > 0 ? String(n) : '5'
+    await setSetting('low_stock_threshold', value)
+    revalidatePath('/admin')
+}
+
+async function ensureCategoriesTable() {
+    await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS categories (
+            id SERIAL PRIMARY KEY,
+            name TEXT NOT NULL,
+            icon TEXT,
+            sort_order INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS categories_name_uq ON categories(name);
+    `)
+}
+
+export async function saveCategory(formData: FormData) {
+    await checkAdmin()
+    await ensureCategoriesTable()
+
+    const idRaw = formData.get('id') as string | null
+    const name = String(formData.get('name') || '').trim()
+    const icon = String(formData.get('icon') || '').trim() || null
+    const sortOrder = Number.parseInt(String(formData.get('sortOrder') || '0'), 10) || 0
+    if (!name) throw new Error("Category name is required")
+
+    if (idRaw) {
+        const id = Number.parseInt(idRaw, 10)
+        await db.update(categories).set({ name, icon, sortOrder, updatedAt: new Date() }).where(eq(categories.id, id))
+    } else {
+        await db.insert(categories).values({ name, icon, sortOrder, updatedAt: new Date() })
+    }
+
+    revalidatePath('/admin/categories')
+    revalidatePath('/')
+}
+
+export async function deleteCategory(id: number) {
+    await checkAdmin()
+    await ensureCategoriesTable()
+    await db.delete(categories).where(eq(categories.id, id))
+    revalidatePath('/admin/categories')
+    revalidatePath('/')
+}

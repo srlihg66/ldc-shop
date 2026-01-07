@@ -1,7 +1,7 @@
 'use client'
 
 import { Button } from "@/components/ui/button"
-import { getRefundParams, markOrderRefunded } from "@/actions/refund"
+import { getRefundParams, markOrderRefunded, proxyRefund } from "@/actions/refund"
 import { useState } from "react"
 import { toast } from "sonner"
 import { Loader2, ExternalLink, CheckCircle } from "lucide-react"
@@ -49,6 +49,24 @@ export function RefundButton({ order }: { order: any }) {
         }
     }
 
+    const handleProxyRefund = async () => {
+        if (!confirm(t('admin.orders.refundProxyConfirm'))) return
+        setLoading(true)
+        try {
+            const result = await proxyRefund(order.orderId)
+            if (result.processed) {
+                toast.success(t('admin.orders.refundSuccess'))
+            } else {
+                toast.info(t('admin.orders.refundProxyNotProcessed'))
+                setShowMarkDone(true)
+            }
+        } catch (e: any) {
+            toast.error(e.message)
+        } finally {
+            setLoading(false)
+        }
+    }
+
     const handleMarkDone = async () => {
         if (!confirm(t('admin.orders.refundVerify'))) return
 
@@ -68,6 +86,9 @@ export function RefundButton({ order }: { order: any }) {
         <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={handleRefund} disabled={loading || showMarkDone}>
                 {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <><ExternalLink className="h-3 w-3 mr-1" />{t('admin.orders.refund')}</>}
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleProxyRefund} disabled={loading || showMarkDone}>
+                {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <><ExternalLink className="h-3 w-3 mr-1" />{t('admin.orders.refundProxy')}</>}
             </Button>
             {showMarkDone && (
                 <Button variant="default" size="sm" onClick={handleMarkDone} disabled={loading}>

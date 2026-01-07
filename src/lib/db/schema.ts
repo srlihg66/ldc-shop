@@ -6,8 +6,10 @@ export const products = pgTable('products', {
     name: text('name').notNull(),
     description: text('description'),
     price: decimal('price', { precision: 10, scale: 2 }).notNull(),
+    compareAtPrice: decimal('compare_at_price', { precision: 10, scale: 2 }),
     category: text('category'),
     image: text('image'),
+    isHot: boolean('is_hot').default(false),
     isActive: boolean('is_active').default(true),
     sortOrder: integer('sort_order').default(0),
     purchaseLimit: integer('purchase_limit'),
@@ -75,4 +77,29 @@ export const reviews = pgTable('reviews', {
     rating: integer('rating').notNull(), // 1-5 stars
     comment: text('comment'),
     createdAt: timestamp('created_at').defaultNow(),
+});
+
+// Categories (optional taxonomy)
+export const categories = pgTable('categories', {
+    id: serial('id').primaryKey(),
+    name: text('name').notNull(),
+    icon: text('icon'),
+    sortOrder: integer('sort_order').default(0),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// Refund requests
+export const refundRequests = pgTable('refund_requests', {
+    id: serial('id').primaryKey(),
+    orderId: text('order_id').notNull(),
+    userId: text('user_id'),
+    username: text('username'),
+    reason: text('reason'),
+    status: text('status').default('pending'), // pending, approved, rejected, processed
+    adminUsername: text('admin_username'),
+    adminNote: text('admin_note'),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
+    processedAt: timestamp('processed_at'),
 });

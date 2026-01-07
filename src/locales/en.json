@@ -36,19 +36,32 @@
         "processing": "Processing...",
         "viewDetails": "View Details",
         "reviews": "Reviews",
-        "dataExport": "Data Export"
+        "dataExport": "Data Export",
+        "categoriesManage": "Categories",
+        "refundRequests": "Refund Requests",
+        "yes": "Yes",
+        "no": "No"
     },
     "home": {
         "title": "Welcome to LDC Shop",
         "subtitle": "A virtual goods shop for the Linux DO ecosystem",
         "noProducts": "No products available yet.",
         "checkBackLater": "Check back later!",
-        "visitorCount": "Total customers: {{count}}"
+        "visitorCount": "Total customers: {{count}}",
+        "sort": {
+            "title": "Sort",
+            "default": "Default",
+            "stock": "Stock",
+            "sold": "Sold",
+            "priceAsc": "Price ↑",
+            "priceDesc": "Price ↓"
+        }
     },
     "buy": {
         "title": "Product Details",
         "description": "Description",
         "noDescription": "No description available.",
+        "hot": "Hot",
         "loginToBuy": "Please sign in to purchase this product.",
         "outOfStockMessage": "This product is currently out of stock.",
         "productNotFound": "Product not found",
@@ -63,6 +76,28 @@
         "shareCopy": "Copy link",
         "shareCopied": "Link copied",
         "shareFailed": "Copy failed"
+    },
+    "search": {
+        "title": "Search",
+        "placeholder": "Search products...",
+        "search": "Search",
+        "resultCount": "{{total}} results",
+        "noResults": "No results",
+        "tryOther": "Try another keyword or category.",
+        "page": "Page {{page}} / {{totalPages}}",
+        "prev": "Prev",
+        "next": "Next",
+        "sort": {
+            "hot": "Hot"
+        }
+    },
+    "refund": {
+        "requestTitle": "Request a refund",
+        "requestHint": "Submit a refund request and wait for admin approval.",
+        "reasonPlaceholder": "Reason (optional)...",
+        "requestButton": "Request refund",
+        "requested": "Refund request submitted",
+        "requestStatus": "Current status: {{status}}"
     },
     "order": {
         "title": "Order Details",
@@ -90,6 +125,9 @@
     "orders": {
         "title": "My Orders",
         "noOrders": "You haven't placed any orders yet.",
+        "noResults": "No matching orders",
+        "count": "{{count}} orders",
+        "searchPlaceholder": "Search by order id / product...",
         "browseProducts": "Browse Products"
     },
     "admin": {
@@ -99,6 +137,8 @@
             "shopNamePlaceholder": "Enter store name",
             "shopNameHint": "Shown in the header and page title.",
             "save": "Save",
+            "lowStockThreshold": "Low stock threshold",
+            "saveThreshold": "Save threshold",
             "shopNameEmpty": "Store name cannot be empty"
         },
         "export": {
@@ -126,20 +166,50 @@
             "date": "Date",
             "actions": "Actions"
         },
+        "categories": {
+            "title": "Categories",
+            "create": "Create Category",
+            "name": "Name",
+            "namePlaceholder": "e.g. games",
+            "icon": "Icon",
+            "iconPlaceholder": "e.g. 🎮",
+            "sortOrder": "Sort",
+            "actions": "Actions"
+        },
+        "refunds": {
+            "title": "Refund Requests",
+            "searchPlaceholder": "Search by order / user / product...",
+            "order": "Order",
+            "user": "User",
+            "product": "Product",
+            "reason": "Reason",
+            "status": "Status",
+            "date": "Date",
+            "actions": "Actions",
+            "approve": "Approve",
+            "reject": "Reject",
+            "adminNote": "Admin note",
+            "adminNotePrompt": "Optional note for this request:"
+        },
         "stats": {
             "today": "Today",
             "week": "Last 7 Days",
             "month": "This Month",
             "total": "Total",
-            "visitors": "Customers"
+            "visitors": "Customers",
+            "lowStock": "Low stock",
+            "lowStockHint": "Threshold ≤ {{threshold}}",
+            "recentOrders": "Recent Orders"
         },
         "products": {
             "title": "Products",
             "addNew": "Add Product",
             "name": "Name",
             "price": "Price",
+            "hot": "Hot",
             "category": "Category",
             "stock": "Stock",
+            "lowStock": "Low",
             "order": "Order",
             "status": "Status",
             "active": "Active",
@@ -162,9 +232,44 @@
             "date": "Date",
             "actions": "Actions",
             "searchPlaceholder": "Search by order / user / email / product / trade...",
+            "showing": "Showing {{from}}-{{to}} of {{total}}",
+            "clearFilters": "Clear",
+            "search": "Search",
+            "page": "Page {{page}} / {{totalPages}}",
+            "pageSize": "Page size",
+            "fulfillmentAll": "All",
+            "needsDelivery": "Needs delivery",
+            "selectAll": "Select all",
+            "selectOne": "Select order",
+            "selectedCount": "Selected: {{count}}",
+            "deleteSelected": "Delete selected",
+            "confirmDeleteSelected": "Delete selected orders? This is irreversible.",
+            "prev": "Prev",
+            "next": "Next",
+            "view": "View",
+            "markPaid": "Mark Paid",
+            "markDelivered": "Mark Delivered",
+            "cancel": "Cancel",
+            "delete": "Delete",
+            "confirmDelete": "Delete this order? This is irreversible.",
+            "exportCsv": "Export CSV",
+            "exportCsvSecrets": "Export CSV (secrets)",
+            "confirmMarkPaid": "Mark this order as paid?",
+            "confirmMarkDelivered": "Mark this order as delivered?",
+            "confirmCancel": "Cancel this order? This will release reserved stock if any.",
+            "detailTitle": "Order Detail",
+            "detail": "Details",
+            "email": "Email",
+            "emailPlaceholder": "Optional email",
+            "createdAt": "Created At",
+            "paidAt": "Paid At",
+            "deliveredAt": "Delivered At",
             "refund": "Refund",
+            "refundProxy": "Refund (Server)",
             "markRefunded": "Mark Refunded",
             "refundConfirm": "This will open the refund page in a new tab.\n\nSteps:\n1. Complete the refund in the new tab\n2. Verify success in Linux DO Credit dashboard\n3. Return here and click \"Mark Refunded\"\n\nContinue?",
+            "refundProxyConfirm": "Attempt refund via server proxy? (May be blocked by WAF)",
+            "refundProxyNotProcessed": "Proxy request finished but not confirmed as success; use manual flow if needed.",
             "refundVerify": "Have you verified the refund was successful in the Linux DO Credit dashboard?",
             "refundSuccess": "Order marked as refunded",
             "refundInfo": "After verifying the refund was successful, click 'Mark Refunded'"
@@ -172,7 +277,7 @@
         "cards": {
             "title": "Manage Stock",
             "addCards": "Add Cards",
-            "placeholder": "Enter card keys, one per line...",
+            "placeholder": "Enter card keys, separated by newlines or commas...",
             "available": "Available",
             "used": "Used",
             "noCards": "No cards added yet."
@@ -186,8 +291,11 @@
             "descPlaceholder": "Enter product description",
             "priceLabel": "Price (Credits)",
             "pricePlaceholder": "0.00",
+            "compareAtPriceLabel": "Original Price (optional)",
+            "compareAtPricePlaceholder": "e.g. 99.00",
             "categoryLabel": "Category",
             "categoryPlaceholder": "general",
+            "isHotLabel": "Mark as Hot",
             "imageLabel": "Image URL",
             "imagePlaceholder": "https://...",
             "saveButton": "Save Product",
@@ -207,10 +315,12 @@
     },
     "announcement": {
         "title": "Announcement",
+        "startAt": "Start time (optional)",
+        "endAt": "End time (optional)",
         "placeholder": "Enter announcement content... (leave empty to hide)",
         "save": "Save Announcement",
         "saved": "Announcement saved!",
-        "hint": "This announcement will be displayed on the homepage. Leave empty to hide."
+        "hint": "Displayed on the homepage. If start/end is set, it will only show during that time window."
     },
     "review": {
         "title": "Reviews",

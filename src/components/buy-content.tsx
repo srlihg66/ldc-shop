@@ -27,9 +27,11 @@ interface Product {
     name: string
     description: string | null
     price: string
+    compareAtPrice?: string | null
     image: string | null
     category: string | null
     purchaseLimit?: number | null
+    isHot?: boolean | null
 }
 
 interface Review {
@@ -109,6 +111,11 @@ export function BuyContent({
                         <div className="flex items-start justify-between gap-4">
                             <div className="space-y-2">
                                 <CardTitle className="text-2xl md:text-3xl font-bold">{product.name}</CardTitle>
+                                {product.isHot && (
+                                    <Badge variant="default" className="w-fit bg-primary/15 text-primary border border-primary/30">
+                                        {t('buy.hot')}
+                                    </Badge>
+                                )}
                                 {product.category && product.category !== 'general' && (
                                     <Badge variant="secondary" className="capitalize backdrop-blur-sm">
                                         {product.category}
@@ -119,6 +126,11 @@ export function BuyContent({
                                 <div className="text-4xl font-bold gradient-text">
                                     {Number(product.price)}
                                 </div>
+                                {product.compareAtPrice && Number(product.compareAtPrice) > Number(product.price) && (
+                                    <div className="text-sm text-muted-foreground line-through">
+                                        {Number(product.compareAtPrice)}
+                                    </div>
+                                )}
                                 <span className="text-sm text-muted-foreground">{t('common.credits')}</span>
                                 <div className="mt-2">
                                     <Badge

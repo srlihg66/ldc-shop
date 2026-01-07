@@ -16,10 +16,12 @@ interface Product {
     name: string
     description: string | null
     price: string
+    compareAtPrice?: string | null
     image: string | null
     category: string | null
     stockCount: number
     soldCount: number
+    isHot?: boolean | null
     rating?: number
     reviewCount?: number
 }
@@ -28,18 +30,24 @@ interface HomeContentProps {
     products: Product[]
     announcement?: string | null
     visitorCount?: number
+    categories?: Array<{ name: string; icon: string | null; sortOrder: number }>
 }
 
-export function HomeContent({ products, announcement, visitorCount }: HomeContentProps) {
+export function HomeContent({ products, announcement, visitorCount, categories: categoryConfig }: HomeContentProps) {
     const { t } = useI18n()
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
     const [searchTerm, setSearchTerm] = useState("")
+    const [sortKey, setSortKey] = useState<string>("default")
 
     // Extract unique categories
     const categories = useMemo(() => {
+        if (categoryConfig && categoryConfig.length) {
+            return [...categoryConfig].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0) || a.name.localeCompare(b.name))
+                .map(c => c.name)
+        }
         const uniqueCategories = new Set(products.map(p => p.category).filter(Boolean) as string[])
         return Array.from(uniqueCategories).sort()
-    }, [products])
+    }, [categoryConfig, products])
 
     // Filter products
     const filteredProducts = useMemo(() => {
@@ -59,8 +67,26 @@ export function HomeContent({ products, announcement, visitorCount }: HomeConten
             )
         }
 
-        return result
-    }, [products, selectedCategory, searchTerm])
+        const sorted = [...result]
+        switch (sortKey) {
+            case 'priceAsc':
+                sorted.sort((a, b) => Number(a.price) - Number(b.price))
+                break
+            case 'priceDesc':
+                sorted.sort((a, b) => Number(b.price) - Number(a.price))
+                break
+            case 'stockDesc':
+                sorted.sort((a, b) => (b.stockCount || 0) - (a.stockCount || 0))
+                break
+            case 'soldDesc':
+                sorted.sort((a, b) => (b.soldCount || 0) - (a.soldCount || 0))
+                break
+            default:
+                break
+        }
+
+        return sorted
+    }, [products, selectedCategory, searchTerm, sortKey])
 
     return (
         <main className="container py-8 md:py-16">
@@ -141,7 +167,35 @@ export function HomeContent({ products, announcement, visitorCount }: HomeConten
                                         )}
                                         onClick={() => setSelectedCategory(category)}
                                     >
-                                        {category}
+                                        {categoryConfig?.length
+                                            ? `${categoryConfig.find(c => c.name === category)?.icon ? `${categoryConfig.find(c => c.name === category)?.icon} ` : ''}${category}`
+                                            : category}
+                                    </Button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="space-y-3">
+                            <h2 className="text-lg font-semibold tracking-tight px-1">{t('home.sort.title')}</h2>
+                            <div className="flex flex-row lg:flex-col gap-2 overflow-x-auto pb-4 lg:pb-0 no-scrollbar">
+                                {[
+                                    { key: 'default', label: t('home.sort.default') },
+                                    { key: 'stockDesc', label: t('home.sort.stock') },
+                                    { key: 'soldDesc', label: t('home.sort.sold') },
+                                    { key: 'priceAsc', label: t('home.sort.priceAsc') },
+                                    { key: 'priceDesc', label: t('home.sort.priceDesc') },
+                                ].map(opt => (
+                                    <Button
+                                        key={opt.key}
+                                        type="button"
+                                        variant={sortKey === opt.key ? "default" : "ghost"}
+                                        className={cn(
+                                            "justify-start whitespace-nowrap",
+                                            sortKey === opt.key ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "hover:bg-muted"
+                                        )}
+                                        onClick={() => setSortKey(opt.key)}
+                                    >
+                                        {opt.label}
                                     </Button>
                                 ))}
                             </div>
@@ -198,6 +252,14 @@ export function HomeContent({ products, announcement, visitorCount }: HomeConten
                                             </h3>
                                         </div>
 
+                                        {product.isHot && (
+                                            <div className="mb-2">
+                                                <Badge variant="default" className="bg-primary/15 text-primary border border-primary/30">
+                                                    {t('buy.hot')}
+                                                </Badge>
+                                            </div>
+                                        )}
+
                                         {/* Rating */}
                                         {product.reviewCount !== undefined && product.reviewCount > 0 && (
                                             <div className="flex items-center gap-2 mb-3">
@@ -220,7 +282,14 @@ export function HomeContent({ products, announcement, visitorCount }: HomeConten
                                     <CardFooter className="p-5 pt-0 flex items-end justify-between gap-3">
                                         <div className="shrink-0 flex flex-col">
                                             <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{t('common.credits')}</span>
-                                            <span className="text-2xl font-bold font-mono tracking-tight">{Number(product.price)}</span>
+                                            <div className="flex items-end gap-2">
+                                                <span className="text-2xl font-bold font-mono tracking-tight">{Number(product.price)}</span>
+                                                {product.compareAtPrice && Number(product.compareAtPrice) > Number(product.price) && (
+                                                    <span className="text-xs text-muted-foreground line-through">
+                                                        {Number(product.compareAtPrice)}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
                                         <div className="flex flex-col items-end gap-2 min-w-0">
                                             <div className="flex flex-wrap justify-end gap-1.5 opacity-80 hover:opacity-100 transition-opacity">

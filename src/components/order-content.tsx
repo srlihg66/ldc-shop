@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from "react"
 import { useI18n } from "@/lib/i18n/context"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -7,6 +8,10 @@ import { Separator } from "@/components/ui/separator"
 import { CreditCard, Package, Clock, AlertCircle, CheckCircle2 } from "lucide-react"
 import { CopyButton } from "@/components/copy-button"
 import { ClientDate } from "@/components/client-date"
+import { Textarea } from "@/components/ui/textarea"
+import { Button } from "@/components/ui/button"
+import { requestRefund } from "@/actions/refund-requests"
+import { toast } from "sonner"
 
 interface Order {
     orderId: string
@@ -21,10 +26,14 @@ interface Order {
 interface OrderContentProps {
     order: Order
     canViewKey: boolean
+    isOwner: boolean
+    refundRequest: { status: string | null; reason: string | null } | null
 }
 
-export function OrderContent({ order, canViewKey }: OrderContentProps) {
+export function OrderContent({ order, canViewKey, isOwner, refundRequest }: OrderContentProps) {
     const { t } = useI18n()
+    const [reason, setReason] = useState("")
+    const [submitting, setSubmitting] = useState(false)
 
     const getStatusBadgeVariant = (status: string) => {
         switch (status) {
@@ -171,6 +180,50 @@ export function OrderContent({ order, canViewKey }: OrderContentProps) {
                             )}
                             <p className="text-sm">{getStatusMessage(order.status)}</p>
                         </div>
+                    )}
+
+                    {isOwner && (order.status === 'paid' || order.status === 'delivered') && (
+                        <>
+                            <Separator className="bg-border/50" />
+                            <div className="space-y-3">
+                                <h3 className="font-semibold">{t('refund.requestTitle')}</h3>
+                                {refundRequest?.status ? (
+                                    <div className="text-sm text-muted-foreground">
+                                        {t('refund.requestStatus', { status: refundRequest.status })}
+                                    </div>
+                                ) : (
+                                    <div className="text-sm text-muted-foreground">
+                                        {t('refund.requestHint')}
+                                    </div>
+                                )}
+                                <Textarea
+                                    value={reason}
+                                    onChange={(e) => setReason(e.target.value)}
+                                    placeholder={t('refund.reasonPlaceholder')}
+                                    rows={3}
+                                    className="resize-none"
+                                    disabled={submitting || !!refundRequest?.status}
+                                />
+                                <div className="flex justify-end">
+                                    <Button
+                                        onClick={async () => {
+                                            setSubmitting(true)
+                                            try {
+                                                await requestRefund(order.orderId, reason)
+                                                toast.success(t('refund.requested'))
+                                            } catch (e: any) {
+                                                toast.error(e.message)
+                                            } finally {
+                                                setSubmitting(false)
+                                            }
+                                        }}
+                                        disabled={submitting || !!refundRequest?.status}
+                                    >
+                                        {submitting ? t('common.processing') : t('refund.requestButton')}
+                                    </Button>
+                                </div>
+                            </div>
+                        </>
                     )}
                 </CardContent>
             </Card>

@@ -4,16 +4,28 @@ import { useState } from "react"
 import { useI18n } from "@/lib/i18n/context"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { saveAnnouncement } from "@/actions/settings"
+import { AnnouncementConfig, saveAnnouncement } from "@/actions/settings"
 
 interface AnnouncementFormProps {
-    initialContent: string | null
+    initialConfig: AnnouncementConfig | null
 }
 
-export function AnnouncementForm({ initialContent }: AnnouncementFormProps) {
+function toDatetimeLocal(value: string | null | undefined): string {
+    if (!value) return ''
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return ''
+    const pad = (n: number) => String(n).padStart(2, '0')
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+export function AnnouncementForm({ initialConfig }: AnnouncementFormProps) {
     const { t } = useI18n()
-    const [content, setContent] = useState(initialContent || '')
+    const [content, setContent] = useState(initialConfig?.content || '')
+    const [startAt, setStartAt] = useState(toDatetimeLocal(initialConfig?.startAt))
+    const [endAt, setEndAt] = useState(toDatetimeLocal(initialConfig?.endAt))
     const [saving, setSaving] = useState(false)
     const [saved, setSaved] = useState(false)
 
@@ -21,7 +33,11 @@ export function AnnouncementForm({ initialContent }: AnnouncementFormProps) {
         setSaving(true)
         setSaved(false)
         try {
-            await saveAnnouncement(content)
+            await saveAnnouncement({
+                content,
+                startAt: startAt ? new Date(startAt).toISOString() : null,
+                endAt: endAt ? new Date(endAt).toISOString() : null,
+            })
             setSaved(true)
             setTimeout(() => setSaved(false), 3000)
         } finally {
@@ -40,6 +56,26 @@ export function AnnouncementForm({ initialContent }: AnnouncementFormProps) {
                 </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                    <div className="grid gap-2">
+                        <Label htmlFor="announcement-start">{t('announcement.startAt')}</Label>
+                        <Input
+                            id="announcement-start"
+                            type="datetime-local"
+                            value={startAt}
+                            onChange={(e) => setStartAt(e.target.value)}
+                        />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="announcement-end">{t('announcement.endAt')}</Label>
+                        <Input
+                            id="announcement-end"
+                            type="datetime-local"
+                            value={endAt}
+                            onChange={(e) => setEndAt(e.target.value)}
+                        />
+                    </div>
+                </div>
                 <Textarea
                     value={content}
                     onChange={(e) => setContent(e.target.value)}

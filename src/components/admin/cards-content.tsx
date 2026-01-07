@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 import { CopyButton } from "@/components/copy-button"
 import { Trash2 } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 interface CardData {
     id: number
@@ -23,11 +24,13 @@ interface CardsContentProps {
 
 export function CardsContent({ productId, productName, unusedCards }: CardsContentProps) {
     const { t } = useI18n()
+    const router = useRouter()
 
     const handleSubmit = async (formData: FormData) => {
         try {
             await addCards(formData)
             toast.success(t('common.success'))
+            router.refresh()
         } catch (e: any) {
             toast.error(e.message)
         }
@@ -79,6 +82,7 @@ export function CardsContent({ productId, productName, unusedCards }: CardsConte
                                                 try {
                                                     await deleteCard(c.id)
                                                     toast.success(t('common.success'))
+                                                    router.refresh()
                                                 } catch (e: any) {
                                                     toast.error(e.message)
                                                 }

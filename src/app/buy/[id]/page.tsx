@@ -31,8 +31,10 @@ export default async function BuyPage({ params }: BuyPageProps) {
                 name: products.name,
                 description: products.description,
                 price: products.price,
+                compareAtPrice: products.compareAtPrice,
                 image: products.image,
                 category: products.category,
+                isHot: products.isHot,
                 isActive: products.isActive,
                 purchaseLimit: products.purchaseLimit,
             })
@@ -59,8 +61,10 @@ export default async function BuyPage({ params }: BuyPageProps) {
                     name TEXT NOT NULL,
                     description TEXT,
                     price DECIMAL(10, 2) NOT NULL,
+                    compare_at_price DECIMAL(10, 2),
                     category TEXT,
                     image TEXT,
+                    is_hot BOOLEAN DEFAULT FALSE,
                     is_active BOOLEAN DEFAULT TRUE,
                     sort_order INTEGER DEFAULT 0,
                     purchase_limit INTEGER,
@@ -100,6 +104,8 @@ export default async function BuyPage({ params }: BuyPageProps) {
                 ALTER TABLE products ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;
                 ALTER TABLE products ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 0;
                 ALTER TABLE products ADD COLUMN IF NOT EXISTS purchase_limit INTEGER;
+                ALTER TABLE products ADD COLUMN IF NOT EXISTS compare_at_price DECIMAL(10, 2);
+                ALTER TABLE products ADD COLUMN IF NOT EXISTS is_hot BOOLEAN DEFAULT FALSE;
                 ALTER TABLE cards ADD COLUMN IF NOT EXISTS reserved_order_id TEXT;
                 ALTER TABLE cards ADD COLUMN IF NOT EXISTS reserved_at TIMESTAMP;
                 CREATE TABLE IF NOT EXISTS settings (
@@ -126,8 +132,10 @@ export default async function BuyPage({ params }: BuyPageProps) {
                     name: products.name,
                     description: products.description,
                     price: products.price,
+                    compareAtPrice: products.compareAtPrice,
                     image: products.image,
                     category: products.category,
+                    isHot: products.isHot,
                     isActive: products.isActive,
                     purchaseLimit: products.purchaseLimit,
                 })

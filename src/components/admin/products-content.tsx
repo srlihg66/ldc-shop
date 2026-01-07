@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { useI18n } from "@/lib/i18n/context"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -10,16 +10,18 @@ import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Plus, Eye, EyeOff, ArrowUp, ArrowDown, TrendingUp, ShoppingCart, CreditCard, Package, Users } from "lucide-react"
-import { deleteProduct, toggleProductStatus, reorderProduct, saveShopName } from "@/actions/admin"
+import { deleteProduct, toggleProductStatus, reorderProduct, saveShopName, saveLowStockThreshold } from "@/actions/admin"
 import { toast } from "sonner"
 
 interface Product {
     id: string
     name: string
     price: string
+    compareAtPrice: string | null
     category: string | null
     stockCount: number
     isActive: boolean
+    isHot: boolean
     sortOrder: number
 }
 
@@ -35,12 +37,21 @@ interface AdminProductsContentProps {
     stats: Stats
     shopName: string | null
     visitorCount: number
+    lowStockThreshold: number
+    recentOrders: Array<{ orderId: string; productName: string; amount: string; status: string; createdAt: Date | null }>
 }
 
-export function AdminProductsContent({ products, stats, shopName, visitorCount }: AdminProductsContentProps) {
+export function AdminProductsContent({ products, stats, shopName, visitorCount, lowStockThreshold, recentOrders }: AdminProductsContentProps) {
     const { t } = useI18n()
     const [shopNameValue, setShopNameValue] = useState(shopName || '')
     const [savingShopName, setSavingShopName] = useState(false)
+    const [thresholdValue, setThresholdValue] = useState(String(lowStockThreshold || 5))
+    const [savingThreshold, setSavingThreshold] = useState(false)
+
+    const lowStockCount = useMemo(() => {
+        const threshold = Number.parseInt(thresholdValue, 10) || 5
+        return products.filter(p => p.stockCount <= threshold).length
+    }, [products, thresholdValue])
 
     const handleDelete = async (id: string) => {
         if (!confirm(t('admin.products.confirmDelete'))) return
@@ -99,6 +110,18 @@ export function AdminProductsContent({ products, stats, shopName, visitorCount }
         }
     }
 
+    const handleSaveThreshold = async () => {
+        setSavingThreshold(true)
+        try {
+            await saveLowStockThreshold(thresholdValue)
+            toast.success(t('common.success'))
+        } catch (e: any) {
+            toast.error(e.message)
+        } finally {
+            setSavingThreshold(false)
+        }
+    }
+
     return (
         <div className="space-y-6">
             {/* Shop Settings */}
@@ -116,9 +139,22 @@ export function AdminProductsContent({ products, stats, shopName, visitorCount }
                             placeholder={t('admin.settings.shopNamePlaceholder')}
                         />
                     </div>
+                    <div className="grid gap-2 md:max-w-xl">
+                        <Label htmlFor="low-stock-threshold">{t('admin.settings.lowStockThreshold')}</Label>
+                        <Input
+                            id="low-stock-threshold"
+                            type="number"
+                            value={thresholdValue}
+                            onChange={(e) => setThresholdValue(e.target.value)}
+                            placeholder="5"
+                        />
+                    </div>
                     <div className="flex items-center gap-3">
                         <Button onClick={handleSaveShopName} disabled={savingShopName}>
                             {savingShopName ? t('common.processing') : t('admin.settings.save')}
+                        </Button>
+                        <Button variant="outline" onClick={handleSaveThreshold} disabled={savingThreshold}>
+                            {savingThreshold ? t('common.processing') : t('admin.settings.saveThreshold')}
                         </Button>
                         <p className="text-xs text-muted-foreground">{t('admin.settings.shopNameHint')}</p>
                     </div>
@@ -126,7 +162,7 @@ export function AdminProductsContent({ products, stats, shopName, visitorCount }
             </Card>
 
             {/* Dashboard Stats */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">{t('admin.stats.today')}</CardTitle>
@@ -177,7 +213,42 @@ export function AdminProductsContent({ products, stats, shopName, visitorCount }
                         <p className="text-xs text-muted-foreground">{t('home.visitorCount', { count: visitorCount })}</p>
                     </CardContent>
                 </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">{t('admin.stats.lowStock')}</CardTitle>
+                        <Package className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{lowStockCount}</div>
+                        <p className="text-xs text-muted-foreground">{t('admin.stats.lowStockHint', { threshold: Number.parseInt(thresholdValue, 10) || 5 })}</p>
+                    </CardContent>
+                </Card>
             </div>
+
+            {/* Recent Orders */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>{t('admin.stats.recentOrders')}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                    {recentOrders.length === 0 ? (
+                        <div className="text-sm text-muted-foreground">-</div>
+                    ) : (
+                        recentOrders.map(o => (
+                            <div key={o.orderId} className="flex items-center justify-between gap-3 text-sm">
+                                <div className="min-w-0">
+                                    <div className="font-medium truncate">{o.productName}</div>
+                                    <div className="text-xs text-muted-foreground font-mono">{o.orderId}</div>
+                                </div>
+                                <div className="shrink-0 text-right">
+                                    <div className="font-medium">{Number(o.amount)} {t('common.credits')}</div>
+                                    <div className="text-xs text-muted-foreground">{t(`order.status.${o.status}`) || o.status}</div>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </CardContent>
+            </Card>
 
             {/* Products Table */}
             <div className="flex items-center justify-between">
@@ -196,12 +267,13 @@ export function AdminProductsContent({ products, stats, shopName, visitorCount }
                         <TableRow>
                             <TableHead className="w-[50px]">{t('admin.products.order')}</TableHead>
                             <TableHead>{t('admin.products.name')}</TableHead>
-                            <TableHead>{t('admin.products.price')}</TableHead>
-                            <TableHead>{t('admin.products.category')}</TableHead>
-                            <TableHead>{t('admin.products.stock')}</TableHead>
-                            <TableHead>{t('admin.products.status')}</TableHead>
-                            <TableHead className="text-right">{t('admin.products.actions')}</TableHead>
-                        </TableRow>
+                                <TableHead>{t('admin.products.price')}</TableHead>
+                                <TableHead>{t('admin.products.category')}</TableHead>
+                                <TableHead>{t('admin.products.hot')}</TableHead>
+                                <TableHead>{t('admin.products.stock')}</TableHead>
+                                <TableHead>{t('admin.products.status')}</TableHead>
+                                <TableHead className="text-right">{t('admin.products.actions')}</TableHead>
+                            </TableRow>
                     </TableHeader>
                     <TableBody>
                         {products.map((product, idx) => (
@@ -229,9 +301,32 @@ export function AdminProductsContent({ products, stats, shopName, visitorCount }
                                     </div>
                                 </TableCell>
                                 <TableCell className="font-medium">{product.name}</TableCell>
-                                <TableCell>{Number(product.price)}</TableCell>
+                                <TableCell>
+                                    <div className="flex items-center gap-2">
+                                        <span>{Number(product.price)}</span>
+                                        {product.compareAtPrice && Number(product.compareAtPrice) > Number(product.price) && (
+                                            <span className="text-xs text-muted-foreground line-through">
+                                                {Number(product.compareAtPrice)}
+                                            </span>
+                                        )}
+                                    </div>
+                                </TableCell>
                                 <TableCell className="capitalize">{product.category || 'general'}</TableCell>
-                                <TableCell>{product.stockCount}</TableCell>
+                                <TableCell>
+                                    {product.isHot ? (
+                                        <Badge variant="secondary">{t('common.yes')}</Badge>
+                                    ) : (
+                                        <span className="text-muted-foreground">-</span>
+                                    )}
+                                </TableCell>
+                                <TableCell>
+                                    <div className="flex items-center gap-2">
+                                        <span>{product.stockCount}</span>
+                                        {product.stockCount <= (Number.parseInt(thresholdValue, 10) || 5) && (
+                                            <Badge variant="destructive" className="text-[10px]">{t('admin.products.lowStock')}</Badge>
+                                        )}
+                                    </div>
+                                </TableCell>
                                 <TableCell>
                                     <Badge variant={product.isActive ? 'default' : 'secondary'}>
                                         {product.isActive ? t('admin.products.active') : t('admin.products.inactive')}

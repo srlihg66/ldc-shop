@@ -10,7 +10,7 @@ import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { useI18n } from "@/lib/i18n/context"
 
-export default function ProductForm({ product }: { product?: any }) {
+export default function ProductForm({ product, categories = [] }: { product?: any; categories?: Array<{ name: string }> }) {
     const router = useRouter()
     const [loading, setLoading] = useState(false)
     const { t } = useI18n()
@@ -48,13 +48,41 @@ export default function ProductForm({ product }: { product?: any }) {
                     </div>
 
                     <div className="grid gap-2">
+                        <Label htmlFor="compareAtPrice">{t('admin.productForm.compareAtPriceLabel')}</Label>
+                        <Input
+                            id="compareAtPrice"
+                            name="compareAtPrice"
+                            type="number"
+                            step="0.01"
+                            defaultValue={product?.compareAtPrice || ''}
+                            placeholder={t('admin.productForm.compareAtPricePlaceholder')}
+                        />
+                    </div>
+
+                    <div className="grid gap-2">
                         <Label htmlFor="purchaseLimit">{t('admin.productForm.purchaseLimitLabel') || "Purchase Limit (0 or empty for unlimited)"}</Label>
                         <Input id="purchaseLimit" name="purchaseLimit" type="number" defaultValue={product?.purchaseLimit} placeholder={t('admin.productForm.purchaseLimitPlaceholder') || "e.g. 1"} />
                     </div>
 
                     <div className="grid gap-2">
                         <Label htmlFor="category">{t('admin.productForm.categoryLabel')}</Label>
-                        <Input id="category" name="category" defaultValue={product?.category} placeholder={t('admin.productForm.categoryPlaceholder')} />
+                        <Input id="category" name="category" list="ldc-category-list" defaultValue={product?.category} placeholder={t('admin.productForm.categoryPlaceholder')} />
+                        <datalist id="ldc-category-list">
+                            {categories.map(c => (
+                                <option key={c.name} value={c.name} />
+                            ))}
+                        </datalist>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <input
+                            id="isHot"
+                            name="isHot"
+                            type="checkbox"
+                            defaultChecked={!!product?.isHot}
+                            className="h-4 w-4 accent-primary"
+                        />
+                        <Label htmlFor="isHot" className="cursor-pointer">{t('admin.productForm.isHotLabel')}</Label>
                     </div>
 
                     <div className="grid gap-2">

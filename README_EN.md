@@ -14,8 +14,9 @@ A robust, serverless virtual goods shop built with **Next.js 16**, **Vercel Post
 - **Linux DO Integration**: Built-in OIDC login and EasyPay payments.
 - **Storefront Experience**:
     - 🔍 **Search & Categories**: Client-side search and category filters.
-    - 📢 **Announcement Banner**: Configurable homepage announcements.
+    - 📢 **Announcement Banner**: Configurable homepage announcements (supports scheduled start/end).
     - 📝 **Markdown Descriptions**: Rich product descriptions.
+    - 🔥 **Hot & Discounts**: Hot tag and original/discount price display.
     - ⭐ **Ratings & Reviews**: Verified buyers can rate and review.
     - 📦 **Stock & Sold Counters**: Real-time inventory and sales display.
     - 🚫 **Purchase Limits**: Limit purchases by paid order count.
@@ -25,12 +26,20 @@ A robust, serverless virtual goods shop built with **Next.js 16**, **Vercel Post
     - 🔒 **Stock Reservation**: 1-minute hold after entering checkout to prevent oversell.
     - ⏱️ **Auto-Cancel**: Unpaid orders are cancelled after 5 minutes and stock is released.
     - 🧾 **Order Center**: Order list and details pages.
+    - 🔄 **Refund Requests**: Users can submit refund requests for admin review.
 - **Admin Console**:
     - 📊 **Sales Stats**: Today/week/month/total overview.
-    - 🧩 **Product Management**: Create/edit, enable/disable, reorder, purchase limits.
-    - 🗂️ **Card Inventory**: Bulk import and delete unused card keys.
-    - 💳 **Orders & Refunds**: Order view and two-step refund flow.
+    - ⚠️ **Low Stock Alerts**: Configurable threshold and warnings.
+    - 🧩 **Product Management**: Create/edit, enable/disable, reorder, purchase limits, hot tag, discount price.
+    - 🏷️ **Category Management**: CRUD categories with icons and ordering.
+    - 🗂️ **Card Inventory**: Bulk import (newline/comma) with de-duplication and delete unused card keys.
+    - 🧯 **Stock Self-Heal**: Handles legacy `is_used = NULL` that can cause false out-of-stock, and backfills it to `false`.
+    - 💳 **Orders & Refunds**: Pagination/search/filters, order detail, mark paid/delivered/cancel, client-mode refund + optional server proxy.
+    - 🧹 **Order Cleanup**: Bulk select and bulk delete.
+    - ⭐ **Review Management**: Search and delete reviews.
+    - 📦 **Data Export**: Export orders/products/reviews/settings; full dump JSON + D1 SQL.
     - 📣 **Announcements**: Homepage announcement management.
+    - 🏷️ **Store Name**: Editable in admin and reflected in header/title.
 - **I18n & Theme**:
     - 🌐 **English/Chinese switcher**.
     - 🌓 **Light/Dark/System themes**.

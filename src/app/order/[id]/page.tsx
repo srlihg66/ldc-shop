@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
-import { orders } from "@/lib/db/schema"
-import { eq } from "drizzle-orm"
+import { orders, refundRequests } from "@/lib/db/schema"
+import { and, desc, eq } from "drizzle-orm"
 import { notFound } from "next/navigation"
 import { cookies } from "next/headers"
 import { OrderContent } from "@/components/order-content"
@@ -26,12 +26,26 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
 
     // Access Control
     let canViewKey = false
-    if (user && (user.id === order.userId || user.username === order.username)) canViewKey = true
+    const isOwner = !!(user && (user.id === order.userId || user.username === order.username))
+    if (isOwner) canViewKey = true
 
     // Check Cookie
     const cookieStore = await cookies()
     const pending = cookieStore.get('ldc_pending_order')
     if (pending?.value === id) canViewKey = true
+
+    // Refund request status (best effort)
+    let refundRequest: any = null
+    if (user?.id) {
+        try {
+            refundRequest = await db.query.refundRequests.findFirst({
+                where: and(eq(refundRequests.orderId, id), eq(refundRequests.userId, user.id)),
+                orderBy: [desc(refundRequests.createdAt)]
+            })
+        } catch {
+            refundRequest = null
+        }
+    }
 
     return (
         <OrderContent
@@ -45,6 +59,8 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
                 paidAt: order.paidAt
             }}
             canViewKey={canViewKey}
+            isOwner={isOwner}
+            refundRequest={refundRequest ? { status: refundRequest.status, reason: refundRequest.reason } : null}
         />
     )
 }
