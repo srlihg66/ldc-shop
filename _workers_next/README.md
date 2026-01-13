@@ -94,7 +94,7 @@
 | `ADMIN_USERS` | Text | 管理员用户名，逗号分隔 |
 | `NEXT_PUBLIC_APP_URL` | **Text** | 你的 Workers 域名 (如 `https://ldc-shop.xxx.workers.dev`) |
 
-> ⚠️ **重要**: `NEXT_PUBLIC_APP_URL` **必须**设置为 Text 类型，不能用 Secret，否则前端无法访问！
+> ⚠️ **重要**: `NEXT_PUBLIC_APP_URL` **必须**设置为 Text 类型，不能用 Secret，否则支付签名会失败！
 
 #### 5. 首次访问
 
