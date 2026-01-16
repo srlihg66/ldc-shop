@@ -49,9 +49,12 @@ export default function ProductForm({ product, categories = [] }: { product?: an
                                 placeholder={t('admin.productForm.slugPlaceholder')}
                                 pattern="^[a-zA-Z0-9_-]+$"
                                 className="flex-1"
+                                disabled={!!product}
                             />
                         </div>
-                        <p className="text-xs text-muted-foreground">{t('admin.productForm.slugHint')}</p>
+                        <p className="text-xs text-muted-foreground">
+                            {product ? t('admin.productForm.slugReadonly') : t('admin.productForm.slugHint')}
+                        </p>
                     </div>
 
                     <div className="grid gap-2">

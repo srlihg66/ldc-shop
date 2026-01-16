@@ -24,19 +24,19 @@ export async function saveProduct(formData: FormData) {
     const existingId = formData.get('id') as string
     const customSlug = (formData.get('slug') as string)?.trim()
     
-    // Use custom slug if provided, otherwise use existing id or generate new one
+    // Determine product ID
     let id: string
     if (existingId) {
-        // Editing existing product - use custom slug if different, otherwise keep existing
-        id = customSlug && customSlug !== existingId ? customSlug : existingId
+        // Editing existing product - ALWAYS keep the original id (slug is read-only for existing products)
+        id = existingId
     } else {
         // New product - use custom slug or generate
         id = customSlug || `prod_${Date.now()}`
-    }
-    
-    // Validate slug format
-    if (!/^[a-zA-Z0-9_-]+$/.test(id)) {
-        throw new Error("Slug can only contain letters, numbers, underscores and hyphens")
+        
+        // Validate slug format for new products
+        if (!/^[a-zA-Z0-9_-]+$/.test(id)) {
+            throw new Error("Slug can only contain letters, numbers, underscores and hyphens")
+        }
     }
     
     const name = formData.get('name') as string
