@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  // Temporary: enable source maps to locate the component causing React #310.
+  // Remove after debugging to avoid exposing source in production.
+  productionBrowserSourceMaps: true,
   async rewrites() {
     return [
       {
