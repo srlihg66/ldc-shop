@@ -1,5 +1,8 @@
 # LDC Shop (Next.js + Workers)
 
+Workers 部署点击图标
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/srlihg66/ldc-shop/tree/main/_workers_next)
+
 [English](./README_EN.md)
 
 ---

@@ -1,22 +1,33 @@
 {
-    "name": "ldc-shop-next",
-    "main": ".open-next/worker.js",
-    "keep_names": true,
-    "compatibility_date": "2025-11-12",
-    "compatibility_flags": [
-        "nodejs_compat"
-    ],
-    "assets": {
-        "directory": ".open-next/assets",
-        "binding": "ASSETS"
-    },
-    "d1_databases": [
-        {
-            "binding": "DB",
-            "database_name": "ldc-shop-next"
-        }
-    ],
-    "observability": {
-        "enabled": true
+  "name": "ldc-shop-next",
+  "main": ".open-next/worker.js",
+  "keep_names": true,
+  "compatibility_date": "2025-11-12",
+  "workers_dev": true,
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "ldc-shop-next"
     }
+  ],
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "OAUTH_CLIENT_ID": "",
+    "OAUTH_CLIENT_SECRET": "",
+    "MERCHANT_ID": "",
+    "MERCHANT_KEY": "",
+    "AUTH_SECRET": "",
+    "ADMIN_USERS": "",
+    "NEXT_PUBLIC_APP_URL": ""
+  },
+  "build": {
+    "command": "npm install && npx opennextjs-cloudflare build"
+  }
 }
